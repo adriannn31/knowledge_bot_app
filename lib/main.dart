@@ -19,7 +19,7 @@ class KnowledgeBot extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
-      home: const ApiKeyWrapper(),
+      home: const ChatScreen(apiKey: "sk_g3YUTaubxZF5SBq4ZVBHaZETOltj7nfU"),
     );
   }
 }
