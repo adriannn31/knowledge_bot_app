@@ -50,27 +50,30 @@ class _ApiKeyWrapperState extends State<ApiKeyWrapper> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: const Column(
             children: [
-              Icon(Icons.lock_person_outlined, color: Colors.indigo, size: 42),
+              Icon(Icons.shield_moon_outlined, color: Colors.indigo, size: 42),
               SizedBox(height: 12),
-              Text("Secure Access", style: TextStyle(fontWeight: FontWeight.bold)),
+              Text("System Access", style: TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Establish a secure connection by entering your system credential.",
-                  textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.black54)),
+              const Text("Enter your secure credential to begin the session.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.black54)),
               const SizedBox(height: 20),
               TextField(
-                obscureText: true, // Hides the key as dots
+                obscureText: true,
                 style: const TextStyle(letterSpacing: 2),
                 decoration: InputDecoration(
-                  hintText: "Enter Key",
+                  hintText: "API Key",
                   hintStyle: const TextStyle(letterSpacing: 0),
                   filled: true,
-                  fillColor: Color(0xFFF5F7FA),
-                  prefixIcon: const Icon(Icons.key_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                  fillColor: const Color(0xFFF5F7FA),
+                  prefixIcon: const Icon(Icons.vpn_key_outlined),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: BorderSide.none),
                 ),
                 onChanged: (v) => input = v,
               ),
@@ -81,10 +84,11 @@ class _ApiKeyWrapperState extends State<ApiKeyWrapper> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo, 
+                  backgroundColor: Colors.indigo,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () {
                   if (input.trim().isNotEmpty) {
@@ -92,7 +96,8 @@ class _ApiKeyWrapperState extends State<ApiKeyWrapper> {
                     Navigator.pop(context);
                   }
                 },
-                child: const Text("Initialize Session", style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text("Initialize",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             )
           ],
@@ -103,7 +108,8 @@ class _ApiKeyWrapperState extends State<ApiKeyWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    if (_key == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_key == null)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     return ChatScreen(apiKey: _key!);
   }
 }
@@ -122,11 +128,19 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
 
+  // ✅ FIX 1: Correct base URL — no CORS proxy needed for mobile.
+  // For Flutter Web, re-enable the proxyUrl line below.
+  static const String _baseUrl = 'https://gen.pollinations.ai/v1/chat/completions';
+  // static const String _proxyUrl = 'https://corsproxy.io/?';  // ← uncomment for Web
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(_scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -141,41 +155,44 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     try {
-      // Using Pollinations backend but without UI branding
       final response = await http.post(
-        Uri.parse('https://text.pollinations.ai/openai'),
+        Uri.parse(_baseUrl), // swap to _proxyUrl + _baseUrl for Flutter Web
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${widget.apiKey}',
         },
         body: jsonEncode({
-          'messages': _messages,
+          // ✅ FIX 2: Use 'openai' — it's a valid free model on Pollinations
+          // Other options: 'openai-large', 'mistral', 'claude-hybridspace'
           'model': 'openai',
-          'cache': false,
+          'messages': _messages,
+          // ✅ FIX 3: Removed 'jsonMode' — not a standard field, can cause errors
         }),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        // ✅ FIX 4: Added null-safe access with a fallback message
+        final reply =
+            data['choices']?[0]?['message']?['content'] ?? '(No response)';
         setState(() {
-          _messages.add({
-            "role": "assistant", 
-            "content": data['choices'][0]['message']['content']
-          });
+          _messages.add({"role": "assistant", "content": reply});
         });
       } else {
         setState(() {
           _messages.add({
-            "role": "assistant", 
-            "content": "⚠️ Session Error: Could not verify credentials. (Code: ${response.statusCode})"
+            "role": "assistant",
+            "content":
+                "⚠️ Error ${response.statusCode}: ${response.reasonPhrase ?? 'Request failed'}.\n\nDouble-check your API key and try again."
           });
         });
       }
     } catch (e) {
       setState(() {
         _messages.add({
-          "role": "assistant", 
-          "content": "⚠️ Network timeout. Please try again."
+          "role": "assistant",
+          "content":
+              "⚠️ Connection failed: ${e.toString()}\n\nCheck your internet connection or CORS proxy settings."
         });
       });
     } finally {
@@ -189,9 +206,9 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Knowledge Bot", style: TextStyle(fontWeight: FontWeight.bold)), 
+        title: const Text("Knowledge Bot",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
-        elevation: 0,
         backgroundColor: Colors.white,
       ),
       body: Column(
@@ -204,24 +221,24 @@ class _ChatScreenState extends State<ChatScreen> {
               itemBuilder: (context, i) {
                 bool isUser = _messages[i]['role'] == 'user';
                 return Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment:
+                      isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
-                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                    constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.75),
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: isUser ? Colors.indigo : Color(0xFFF1F3F9),
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(isUser ? 16 : 0),
-                        bottomRight: Radius.circular(isUser ? 0 : 16),
-                      ),
+                      color: isUser ? Colors.indigo : const Color(0xFFF1F3F9),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: MarkdownBody(
                       data: _messages[i]['content']!,
                       styleSheet: MarkdownStyleSheet(
-                        p: TextStyle(color: isUser ? Colors.white : Colors.black87, fontSize: 15),
+                        p: TextStyle(
+                            color:
+                                isUser ? Colors.white : Colors.black87,
+                            fontSize: 15),
                       ),
                     ),
                   ),
@@ -229,21 +246,24 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          if (_isTyping) const Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: LinearProgressIndicator(minHeight: 1)),
+          if (_isTyping)
+            const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: LinearProgressIndicator(minHeight: 1)),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade200))),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
                     decoration: InputDecoration(
-                      hintText: "Ask anything...", 
+                      hintText: "Type a message...",
                       filled: true,
                       fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide.none),
                     ),
                     onSubmitted: _sendMessage,
                   ),
@@ -252,8 +272,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 CircleAvatar(
                   backgroundColor: Colors.indigo,
                   child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white, size: 20), 
-                    onPressed: () => _sendMessage(_controller.text)
+                    icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                    onPressed: () => _sendMessage(_controller.text),
                   ),
                 ),
               ],
