@@ -15,6 +15,8 @@ dependencies:
   flutter_dotenv: ^6.0.0
   cupertino_icons: ^1.0.8
   flutter_markdown: ^0.7.7+1
+  file_picker: ^8.0.0      # <--- This fixes your 'FilePickerResult' error
+  path: ^1.9.0             # Helpful for handling file names
 
 dev_dependencies:
   flutter_test:
