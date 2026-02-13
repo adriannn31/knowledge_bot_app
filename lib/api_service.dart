@@ -1,34 +1,35 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'config.dart';
 
 class ApiService {
-  // Use the Pollinations AI OpenAI-compatible endpoint
-  final String baseUrl = "https://gen.pollinations.ai/v1/chat/completions";
+  final String apiKey;
 
-  Future<String> getBotResponse(String query) async {
-    final response = await http.post(
-      Uri.parse(baseUrl),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $apiKey", // Uses the sk_... key from config.dart
-      },
-      body: jsonEncode({
-        "model": "qwen-character",
-        "messages": [
-          {"role": "system", "content": "You are a helpful assistant."},
-          {"role": "user", "content": query}
-        ]
-      }),
-    );
+  // We pass the key into the service when the user "logs in"
+  ApiService(this.apiKey);
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      // Pollinations/OpenAI structure: choices -> message -> content
-      return data["choices"][0]["message"]["content"];
-    } else {
-      // This will help you see if the API key or JSON is actually the issue
-      throw Exception("Failed: ${response.statusCode} - ${response.body}");
+  Future<String> getChatResponse(List<Map<String, String>> messages) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://text.pollinations.ai/openai'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'messages': messages,
+          'model': 'openai',
+          'cache': false,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['choices'][0]['message']['content'];
+      } else {
+        return "⚠️ Error: ${response.statusCode}. Connection failed.";
+      }
+    } catch (e) {
+      return "⚠️ System timeout. Please try again.";
     }
   }
 }
