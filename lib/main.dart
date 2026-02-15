@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:read_pdf_text/read_pdf_text.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
 // ─────────────────────────────────────────────
 //  STORAGE MANAGER
 //  Centralises all SharedPreferences I/O so
@@ -85,7 +85,8 @@ class StorageManager {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+  // Only load .env on non-web platforms
+  if (!kIsWeb) { await dotenv.load(fileName: ".env"); }
   await StorageManager.init();
   runApp(const KnowledgeBot());
 }
