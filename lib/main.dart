@@ -10,6 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:read_pdf_text/read_pdf_text.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ─────────────────────────────────────────────
 //  STORAGE MANAGER
@@ -84,6 +85,18 @@ class StorageManager {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables from .env
+  await dotenv.load(fileName: ".env");
+
+  // Initialize local storage
+  await StorageManager.init();
+
+  runApp(const KnowledgeBot());
+}
+
   await StorageManager.init();
   runApp(const KnowledgeBot());
 }
