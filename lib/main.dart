@@ -59,6 +59,11 @@ class StorageManager {
   static Future<void> saveChatSessions(List<Map<String, String>> sessions) =>
       _p.setString('chat_sessions', jsonEncode(sessions));
 
+  // ── API Key ────────────────────────────────
+  static String loadApiKey() => _p.getString('api_key') ?? '';
+  static Future<void> saveApiKey(String key) => _p.setString('api_key', key);
+  static Future<void> clearApiKey() => _p.remove('api_key');
+
   // ── Memory Profiles ────────────────────────
   static List<Map<String, String>> loadMemoryProfiles() {
     final s = _p.getString('memory_profiles');
@@ -165,8 +170,7 @@ class ChatDashboard extends StatefulWidget {
 class _ChatDashboardState extends State<ChatDashboard>
     with TickerProviderStateMixin {
 
-  // ⚠️ Your Pollinations API key
-  final String _apiKey = "sk_g3YUTaubxZF5SBq4ZVBHaZETOltj7nfU";
+  String _apiKey = '';
 
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -210,7 +214,6 @@ class _ChatDashboardState extends State<ChatDashboard>
     _controller.addListener(() {
       _inputHasText.value = _controller.text.trim().isNotEmpty;
     });
-    // 3 dot bounce controllers staggered by 150ms each
     _dotControllers = List.generate(3, (i) => AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -220,6 +223,11 @@ class _ChatDashboardState extends State<ChatDashboard>
         CurvedAnimation(parent: c, curve: Curves.easeInOut),
       ),
     ).toList();
+    // Load API key — show setup screen if not set
+    _apiKey = StorageManager.loadApiKey();
+    if (_apiKey.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showApiKeyScreen(canDismiss: false));
+    }
   }
 
   @override
@@ -229,6 +237,220 @@ class _ChatDashboardState extends State<ChatDashboard>
     _inputHasText.dispose();
     for (final c in _dotControllers) { c.dispose(); }
     super.dispose();
+  }
+
+  // ─── API KEY SETUP ───────────────────────────
+
+  void _showApiKeyScreen({bool canDismiss = true}) {
+    final keyController = TextEditingController();
+    bool _obscure = true;
+    bool _loading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isDismissible: canDismiss,
+      enableDrag: canDismiss,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            decoration: BoxDecoration(
+              color: widget.isDarkMode
+                  ? const Color(0xFF1A1A2E)
+                  : Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                        color: Colors.grey[500],
+                        borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                // Icon + title
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [Color(0xFF7C3AED), Color(0xFF2563EB)]),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.key_rounded,
+                          color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('API Key Required',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800)),
+                        Text('Pollinations API key',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500])),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // Info box
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7C3AED).withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: const Color(0xFF7C3AED).withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.lock_outline,
+                          size: 16, color: Color(0xFF7C3AED)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Your key is stored only on this device and never shared.',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Key input
+                TextField(
+                  controller: keyController,
+                  autofocus: true,
+                  obscureText: _obscure,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: widget.isDarkMode ? Colors.white : Colors.black87,
+                    fontFamily: 'monospace',
+                    letterSpacing: _obscure ? 2 : 0,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'xx_xxxxxxxxxxxxxxxx',
+                    hintStyle: TextStyle(
+                        color: widget.isDarkMode
+                            ? Colors.white24
+                            : Colors.black26,
+                        fontFamily: 'monospace',
+                        letterSpacing: 0),
+                    filled: true,
+                    fillColor: widget.isDarkMode
+                        ? const Color(0xFF252535)
+                        : const Color(0xFFF0F0F8),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    prefixIcon: const Icon(Icons.vpn_key_rounded,
+                        size: 18, color: Color(0xFF7C3AED)),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                          _obscure
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          size: 18,
+                          color: Colors.grey[500]),
+                      onPressed: () => setSheet(() => _obscure = !_obscure),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Get your free key at gen.pollinations.ai',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                ),
+                const SizedBox(height: 24),
+                // Buttons
+                Row(
+                  children: [
+                    if (canDismiss && _apiKey.isNotEmpty) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: _loading
+                            ? null
+                            : () async {
+                                final key = keyController.text.trim();
+                                if (key.isEmpty) {
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(const SnackBar(
+                                    content: Text('Please enter your API key'),
+                                    backgroundColor: Colors.red,
+                                  ));
+                                  return;
+                                }
+                                setSheet(() => _loading = true);
+                                await StorageManager.saveApiKey(key);
+                                setState(() => _apiKey = key);
+                                if (mounted) Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(const SnackBar(
+                                  content: Text('✅ API key saved securely'),
+                                  backgroundColor: Color(0xFF7C3AED),
+                                ));
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7C3AED),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Text('Save & Continue',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _setTyping(bool value) {
@@ -1732,6 +1954,10 @@ If the code has NO errors, say so clearly and explain why it looks correct.''';
 
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
+    if (_apiKey.isEmpty) {
+      _showApiKeyScreen(canDismiss: false);
+      return;
+    }
 
     if (_isListening) {
       await _speech.stop();
@@ -2045,6 +2271,37 @@ If the code has NO errors, say so clearly and explain why it looks correct.''';
       ),
       body: Column(
         children: [
+          // ── NO API KEY WARNING BANNER ──
+          if (_apiKey.isEmpty)
+            GestureDetector(
+              onTap: () => _showApiKeyScreen(canDismiss: false),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 10),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF7C1D1D), Color(0xFF991B1B)],
+                  ),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        size: 16, color: Colors.white),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'API key not set — tap here to add your Pollinations key',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.white),
+                      ),
+                    ),
+                    Icon(Icons.chevron_right,
+                        size: 16, color: Colors.white70),
+                  ],
+                ),
+              ),
+            ),
           if (_sharedMemory.trim().isNotEmpty)
             GestureDetector(
               onTap: _showSharedMemoryDialog,
@@ -2221,6 +2478,38 @@ If the code has NO errors, say so clearly and explain why it looks correct.''';
           ),
 
           const Divider(),
+          // API KEY TILE
+          ListTile(
+            leading: const Icon(Icons.key_rounded, color: Color(0xFF7C3AED)),
+            title: const Text('API Key'),
+            subtitle: Text(
+              _apiKey.isEmpty
+                  ? 'Not set — tap to add'
+                  : '${_apiKey.substring(0, _apiKey.length > 8 ? 8 : _apiKey.length)}••••••••',
+              style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  color: _apiKey.isEmpty ? Colors.red : Colors.grey),
+            ),
+            trailing: _apiKey.isNotEmpty
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle,
+                          size: 14, color: Colors.green),
+                      const SizedBox(width: 4),
+                      const Text('Set',
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.green)),
+                    ],
+                  )
+                : const Icon(Icons.warning_amber_rounded,
+                    size: 16, color: Colors.red),
+            onTap: () {
+              Navigator.pop(context);
+              _showApiKeyScreen(canDismiss: true);
+            },
+          ),
           ListTile(
             leading: Icon(widget.isDarkMode
                 ? Icons.light_mode
