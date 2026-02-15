@@ -85,21 +85,11 @@ class StorageManager {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Load environment variables from .env
   await dotenv.load(fileName: ".env");
-
-  // Initialize local storage
-  await StorageManager.init();
-
-  runApp(const KnowledgeBot());
-}
-
   await StorageManager.init();
   runApp(const KnowledgeBot());
 }
+
 
 class KnowledgeBot extends StatefulWidget {
   const KnowledgeBot({super.key});
