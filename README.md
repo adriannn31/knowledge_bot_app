@@ -1,16 +1,27 @@
-# knowledge_bot_app
+# Nexus – Knowledge Bot App
 
-A new Flutter project.
+A Flutter-based chatbot application with memory profiles, chat history, speech-to-text, and debugging tools.  
+Built with Flutter and deployed via GitHub Pages.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🚀 Live Demo
+👉 [View on GitHub Pages](https://<adriannn31>.github.io/knowledge_bot_app/)
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## ✨ Features
+- Persistent chat history using `SharedPreferences`
+- Memory profiles for customizable context
+- Speech-to-text integration
+- Markdown rendering for rich responses
+- Auto-debugger for code blocks
+- Dark/Light theme toggle
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 🛠️ Setup Instructions
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/<adriannn31>/knowledge_bot_app.git
+   cd knowledge_bot_app
