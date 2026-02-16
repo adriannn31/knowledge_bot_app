@@ -304,7 +304,7 @@ class _ChatDashboardState extends State<ChatDashboard>
                             style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800)),
-                        Text('Pollinations API key',
+                        Text('Enter your API key',
                             style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[500])),
@@ -382,7 +382,7 @@ class _ChatDashboardState extends State<ChatDashboard>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Get your free key at gen.pollinations.ai',
+                  'Enter your API key to get started',
                   style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                 ),
                 const SizedBox(height: 24),
@@ -2295,7 +2295,7 @@ If the code has NO errors, say so clearly and explain why it looks correct.''';
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'API key not set — tap here to add your Pollinations key',
+                        'API key not set — tap here to add your key',
                         style:
                             TextStyle(fontSize: 12, color: Colors.white),
                       ),
